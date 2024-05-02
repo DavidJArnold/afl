@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 pub mod squiggle;
+pub mod models;
 
 struct Match {
     home_team: String,
