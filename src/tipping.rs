@@ -11,6 +11,14 @@ struct Match {
     venue: Option<String>,
 }
 
+struct MatchResult {
+    winning_team: Option<Team>,
+    winning_margin: Option<i32>,
+    draw: bool,
+    home_team_won: bool,
+    away_team_won: bool,
+}
+
 struct MatchPrediction {
     prediction: f32,
     pred_margin: i32,
