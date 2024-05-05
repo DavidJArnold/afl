@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub mod squiggle;
 pub mod models;
+pub mod squiggle;
 
 struct Match {
     home_team: String,

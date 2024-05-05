@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
 // use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use request_cache::{create_connection, request};
 use serde_json::Value;
-use request_cache::{request, create_connection};
 
-use crate::tipping::{SquiggleMatch, Match, Team};
+use crate::tipping::SquiggleMatch;
 
 // pub fn get_squiggle_game() -> String {
 //     Match {
@@ -25,14 +25,17 @@ use crate::tipping::{SquiggleMatch, Match, Team};
 
 fn call_squiggle_season(year: i32, user_agent: &str) -> String {
     let conn = create_connection("squiggle_cache");
-    let url = format!(
-            "https://api.squiggle.com.au/?q=games;year={}",
-            year
-        );
-    let resp = request(&conn, url, "GET".to_string(), 86_400, Some(false), Some(user_agent));
+    let url = format!("https://api.squiggle.com.au/?q=games;year={}", year);
+    let resp = request(
+        &conn,
+        url,
+        "GET".to_string(),
+        86_400,
+        Some(false),
+        Some(user_agent),
+    );
     resp.response
 }
-
 
 pub fn get_squiggle_season(year: i32, user_agent: &str) -> Vec<SquiggleMatch> {
     let body = call_squiggle_season(year, user_agent);
