@@ -23,8 +23,8 @@ use crate::tipping::SquiggleMatch;
 //     "A game".to_string()
 // }
 
-fn call_squiggle_season(year: i32, user_agent: &str) -> String {
-    let conn = create_connection("squiggle_cache");
+fn call_squiggle_season(year: i32, user_agent: &str, cache_session: &str) -> String {
+    let conn = create_connection(cache_session);
     let url = format!("https://api.squiggle.com.au/?q=games;year={}", year);
     let resp = request(
         &conn,
@@ -37,20 +37,20 @@ fn call_squiggle_season(year: i32, user_agent: &str) -> String {
     resp.response
 }
 
-pub fn get_squiggle_season(year: i32, user_agent: &str) -> Vec<SquiggleMatch> {
-    let body = call_squiggle_season(year, user_agent);
+pub fn get_squiggle_season(year: i32, user_agent: &str, cache_session: &str) -> Vec<SquiggleMatch> {
+    let body = call_squiggle_season(year, user_agent, cache_session);
     let v: Value = serde_json::from_str(&body).unwrap();
     serde_json::from_str(&v["games"].to_string()).unwrap()
 }
 
-pub fn get_squiggle_teams(squiggle_games: Vec<SquiggleMatch>) -> HashSet<String> {
+pub fn get_squiggle_teams(squiggle_games: &Vec<SquiggleMatch>) -> HashSet<String> {
     let mut names = HashSet::new();
     for game in squiggle_games {
-        if let Some(name) = game.ateam {
-            names.insert(name);
+        if let Some(name) = &game.ateam {
+            names.insert(name.to_string());
         }
-        if let Some(name) = game.hteam {
-            names.insert(name);
+        if let Some(name) = &game.hteam {
+            names.insert(name.to_string());
         }
     }
     names

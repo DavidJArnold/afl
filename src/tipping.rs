@@ -4,6 +4,7 @@ use std::fmt;
 pub mod models;
 pub mod squiggle;
 
+#[derive(Debug)]
 struct Match {
     home_team: String,
     away_team: String,
@@ -11,6 +12,7 @@ struct Match {
     venue: Option<String>,
 }
 
+#[derive(Debug)]
 struct MatchResult {
     winning_team: Option<Team>,
     winning_margin: Option<i32>,
@@ -24,6 +26,7 @@ struct MatchPrediction {
     pred_margin: i32,
 }
 
+#[derive(Debug)]
 struct Team {
     name: String,
 }
@@ -68,4 +71,37 @@ pub struct SquiggleMatch {
     winner: Option<String>,
     winnerteamid: Option<i32>,
     year: Option<i32>,
+}
+
+impl SquiggleMatch {
+    fn get_match(&self) -> Match {
+        Match {
+            home_team: self.hteam.as_ref().unwrap().clone(),
+            away_team: self.ateam.as_ref().unwrap().clone(),
+            date: chrono::NaiveDateTime::parse_from_str(&self.localtime, "%Y-%m-%d %H:%M:%S").expect(&format!("{:?}", self.timestr)),
+            venue: self.venue.clone(),
+        }
+    }
+
+    fn get_match_result(&self) -> MatchResult {
+        let margin = if self.hscore == self.ascore {
+            None 
+        } else {
+            Some((self.hscore.unwrap() - self.ascore.unwrap()).abs())
+        };
+        let winning_team = if self.ascore.unwrap() == self.hscore.unwrap() {
+            None
+        } else {
+            Some(Team{name: self.winner.as_ref().unwrap().to_string()})
+        };
+
+        MatchResult {
+            winning_team,
+            winning_margin: margin,
+            away_team_won: self.hscore.unwrap() < self.ascore.unwrap(),
+            home_team_won: self.hscore.unwrap() > self.ascore.unwrap(),
+            draw: self.hscore.unwrap() == self.ascore.unwrap(),
+
+        }
+    }
 }

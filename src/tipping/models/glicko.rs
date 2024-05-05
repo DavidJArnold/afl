@@ -13,7 +13,7 @@ pub struct GlickoTeamStats {
     offset: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GlickoModel {
     pub model_stats: HashMap<String, GlickoTeamStats>,
     pub model_params: GlickoModelParams,
@@ -30,7 +30,7 @@ pub struct GlickoModelInitParams {
     pub starting_elo: Option<f32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GlickoModelParams {
     pub teams: HashSet<String>,
     pub starting_rd: f32,
