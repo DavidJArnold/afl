@@ -5,7 +5,7 @@ pub mod models;
 pub mod squiggle;
 
 #[derive(Debug)]
-struct Match {
+pub struct Match {
     home_team: String,
     away_team: String,
     date: chrono::NaiveDateTime,
@@ -13,7 +13,7 @@ struct Match {
 }
 
 #[derive(Debug)]
-struct MatchResult {
+pub struct MatchResult {
     winning_team: Option<Team>,
     winning_margin: Option<i32>,
     draw: bool,
@@ -21,9 +21,10 @@ struct MatchResult {
     away_team_won: bool,
 }
 
-struct MatchPrediction {
+pub struct MatchPrediction {
     prediction: f32,
     pred_margin: i32,
+    home_team_win: bool,
 }
 
 #[derive(Debug)]
@@ -78,21 +79,24 @@ impl SquiggleMatch {
         Match {
             home_team: self.hteam.as_ref().unwrap().clone(),
             away_team: self.ateam.as_ref().unwrap().clone(),
-            date: chrono::NaiveDateTime::parse_from_str(&self.localtime, "%Y-%m-%d %H:%M:%S").expect(&format!("{:?}", self.timestr)),
+            date: chrono::NaiveDateTime::parse_from_str(&self.localtime, "%Y-%m-%d %H:%M:%S")
+                .unwrap(),
             venue: self.venue.clone(),
         }
     }
 
     fn get_match_result(&self) -> MatchResult {
         let margin = if self.hscore == self.ascore {
-            None 
+            None
         } else {
             Some((self.hscore.unwrap() - self.ascore.unwrap()).abs())
         };
         let winning_team = if self.ascore.unwrap() == self.hscore.unwrap() {
             None
         } else {
-            Some(Team{name: self.winner.as_ref().unwrap().to_string()})
+            Some(Team {
+                name: self.winner.as_ref().unwrap().to_string(),
+            })
         };
 
         MatchResult {
@@ -101,7 +105,6 @@ impl SquiggleMatch {
             away_team_won: self.hscore.unwrap() < self.ascore.unwrap(),
             home_team_won: self.hscore.unwrap() > self.ascore.unwrap(),
             draw: self.hscore.unwrap() == self.ascore.unwrap(),
-
         }
     }
 }

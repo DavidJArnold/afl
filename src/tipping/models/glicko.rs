@@ -1,4 +1,4 @@
-use crate::tipping::{Match, MatchResult};
+use crate::tipping::{Match, MatchPrediction, MatchResult};
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
@@ -98,21 +98,25 @@ impl fmt::Display for GlickoModel {
     }
 }
 
-pub fn predict(model: &GlickoModel, match_: &Match, scale: Option<f32>) -> f32 {
+pub fn predict(model: &GlickoModel, match_: &Match, scale: Option<f32>) -> MatchPrediction {
     let scale: f32 = scale.unwrap_or(2.0f32.sqrt());
     let h_team = &match_.home_team;
     let a_team = &match_.away_team;
 
     let mu_h = (model.model_stats.get(h_team).unwrap().elo
-        + model.model_params.offsets.get(h_team).unwrap()
+        + model.model_params.offsets.get(h_team).unwrap_or(&0.0)
         - model.model_params.starting_elo)
         / model.model_params.scale_factor;
     let mu_a = (model.model_stats.get(a_team).unwrap().elo - model.model_params.starting_elo)
         / model.model_params.scale_factor;
-
-    (1.0 / (1.0 + (-scale * (mu_h - mu_a)).exp()))
+    let home_team_win_prob = (1.0 / (1.0 + (-scale * (mu_h - mu_a)).exp()))
         .min(0.99)
-        .max(0.01)
+        .max(0.01);
+    MatchPrediction {
+        prediction: home_team_win_prob,
+        pred_margin: 0,
+        home_team_win: home_team_win_prob >= 0.5,
+    }
 }
 
 pub fn update(
@@ -174,10 +178,10 @@ pub fn update(
 
     let d1 = h_team_rd_scaled.powi(2)
         * g_(a_team_rd_scaled)
-        * (outcome - E_(h_team_rating, a_team_rating, a_team_rd_scaled));
+        * (outcome - e_(h_team_rating, a_team_rating, a_team_rd_scaled));
     let d2 = a_team_rd_scaled.powi(2)
         * g_(h_team_rd_scaled)
-        * (1.0 - outcome - E_(a_team_rating, h_team_rating, h_team_rd_scaled));
+        * (1.0 - outcome - e_(a_team_rating, h_team_rating, h_team_rd_scaled));
 
     h_team_rating += d1;
     a_team_rating += d2;
@@ -202,6 +206,7 @@ pub fn update(
     model
 }
 
+#[allow(clippy::too_many_arguments)]
 fn new_volatility(
     model_params: &GlickoModelParams,
     vol: f32,
@@ -214,13 +219,13 @@ fn new_volatility(
 ) -> f32 {
     let a = vol.powi(2).ln();
     let eps = 0.000001;
-    let mut A = a;
+    let mut var_a = a;
 
-    let mut B: f32 = 0.0;
+    let mut var_b: f32;
     let delta: f32 = delta_(score, mu, mu_j, phi_j);
     let tau = model_params.volatility_constraint;
     if delta.powi(2) > rd.powi(2) + v {
-        B = (delta.powi(2) - rd.powi(2) - v).ln();
+        var_b = (delta.powi(2) - rd.powi(2) - v).ln();
     } else {
         let mut k = 1;
         while f_(
@@ -234,26 +239,26 @@ fn new_volatility(
         {
             k += 1;
         }
-        B = a - k as f32 * tau.abs();
+        var_b = a - k as f32 * tau.abs();
     }
 
-    let mut fA = f_(rd, A, delta, v, a, model_params.volatility_constraint);
-    let mut fB = f_(rd, B, delta, v, a, model_params.volatility_constraint);
+    let mut f_a = f_(rd, var_a, delta, v, a, model_params.volatility_constraint);
+    let mut f_b = f_(rd, var_b, delta, v, a, model_params.volatility_constraint);
 
-    while (B - A).abs() > eps {
-        let C = A + ((A - B) * fA) / (fB - fA);
-        let fC = f_(rd, C, delta, v, a, model_params.volatility_constraint);
+    while (var_b - var_a).abs() > eps {
+        let var_c = var_a + ((var_a - var_b) * f_a) / (f_b - f_a);
+        let f_c = f_(rd, var_c, delta, v, a, model_params.volatility_constraint);
 
-        if fC * fB < 0.0 {
-            A = B;
-            fA = fB;
+        if f_c * f_b < 0.0 {
+            var_a = var_b;
+            f_a = f_b;
         } else {
-            fA /= 2.0;
+            f_a /= 2.0;
         }
-        B = C;
-        fB = fC;
+        var_b = var_c;
+        f_b = f_c;
     }
-    (A / 2.0).exp()
+    (var_a / 2.0).exp()
 }
 
 fn f_(rd: f32, x: f32, delta: f32, v: f32, a: f32, vol_constraint: f32) -> f32 {
@@ -267,14 +272,14 @@ fn g_(phi: f32) -> f32 {
     1.0 / (1.0 + 3.0 * phi.powi(2) / PI.powi(2))
 }
 
-fn E_(mu: f32, mu_j: f32, phi_j: f32) -> f32 {
+fn e_(mu: f32, mu_j: f32, phi_j: f32) -> f32 {
     1.0 / (1.0 + (-g_(phi_j) * (mu - mu_j)).exp())
 }
 
 fn v_(mu: f32, mu_j: f32, phi_j: f32) -> f32 {
-    1.0 / (g_(phi_j).powi(2) * E_(mu, mu_j, phi_j) * (1.0 - E_(mu, mu_j, phi_j)))
+    1.0 / (g_(phi_j).powi(2) * e_(mu, mu_j, phi_j) * (1.0 - e_(mu, mu_j, phi_j)))
 }
 
 fn delta_(score: f32, mu: f32, mu_j: f32, phi_j: f32) -> f32 {
-    v_(mu, mu_j, phi_j) * g_(phi_j) * (score - E_(mu, mu_j, phi_j))
+    v_(mu, mu_j, phi_j) * g_(phi_j) * (score - e_(mu, mu_j, phi_j))
 }
