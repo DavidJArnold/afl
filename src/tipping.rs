@@ -22,13 +22,13 @@ pub struct MatchResult {
 }
 
 pub struct MatchPrediction {
-    prediction: f32,
+    prediction: f64,
     pred_margin: i32,
     home_team_win: bool,
 }
 
-#[derive(Debug)]
-struct Team {
+#[derive(Debug, Clone)]
+struct Team{
     name: String,
 }
 
@@ -77,8 +77,8 @@ pub struct SquiggleMatch {
 impl SquiggleMatch {
     fn get_match(&self) -> Match {
         Match {
-            home_team: self.hteam.as_ref().unwrap().clone(),
-            away_team: self.ateam.as_ref().unwrap().clone(),
+            home_team: self.hteam.clone().unwrap(),
+            away_team: self.ateam.clone().unwrap(),
             date: chrono::NaiveDateTime::parse_from_str(&self.localtime, "%Y-%m-%d %H:%M:%S")
                 .unwrap(),
             venue: self.venue.clone(),
@@ -95,7 +95,7 @@ impl SquiggleMatch {
             None
         } else {
             Some(Team {
-                name: self.winner.as_ref().unwrap().to_string(),
+                name: self.winner.clone().unwrap(),
             })
         };
 

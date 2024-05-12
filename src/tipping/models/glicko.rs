@@ -1,16 +1,16 @@
 use crate::tipping::{Match, MatchPrediction, MatchResult};
 use std::{
     collections::{HashMap, HashSet},
-    f32::consts::PI,
+    f64::consts::PI,
     fmt,
 };
 
 #[derive(Debug, Clone)]
 pub struct GlickoTeamStats {
-    elo: f32,
-    rd: f32,
-    volatility: f32,
-    offset: f32,
+    elo: f64,
+    rd: f64,
+    volatility: f64,
+    offset: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -22,43 +22,43 @@ pub struct GlickoModel {
 #[derive(Debug)]
 pub struct GlickoModelInitParams {
     pub teams: HashSet<String>,
-    pub starting_rd: Option<f32>,
-    pub starting_volatility: Option<f32>,
-    pub offsets: Option<HashMap<String, f32>>,
-    pub scale_factor: Option<f32>,
-    pub volatility_constraint: Option<f32>,
-    pub starting_elo: Option<f32>,
+    pub starting_rd: Option<f64>,
+    pub starting_volatility: Option<f64>,
+    pub offsets: Option<HashMap<String, f64>>,
+    pub scale_factor: Option<f64>,
+    pub volatility_constraint: Option<f64>,
+    pub starting_elo: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
 pub struct GlickoModelParams {
     pub teams: HashSet<String>,
-    pub starting_rd: f32,
-    pub starting_volatility: f32,
-    pub offsets: HashMap<String, f32>,
-    pub scale_factor: f32,
-    pub volatility_constraint: f32,
-    pub starting_elo: f32,
+    pub starting_rd: f64,
+    pub starting_volatility: f64,
+    pub offsets: HashMap<String, f64>,
+    pub scale_factor: f64,
+    pub volatility_constraint: f64,
+    pub starting_elo: f64,
 }
 
 impl GlickoModel {
     pub fn new(params: GlickoModelInitParams) -> GlickoModel {
-        const STARTING_ELO: f32 = 1500.0;
-        const DEFAULT_STARTING_RD: f32 = 15.0;
-        const DEFAULT_STARTING_VOLATILITY: f32 = 0.05;
-        const DEFAULT_SCALE_FACTOR: f32 = 173.718;
-        const VOLATILITY_CONSTRAINT: f32 = 0.1;
+        const STARTING_ELO: f64 = 1500.0;
+        const DEFAULT_STARTING_RD: f64 = 15.0;
+        const DEFAULT_STARTING_VOLATILITY: f64 = 0.05;
+        const DEFAULT_SCALE_FACTOR: f64 = 173.718;
+        const VOLATILITY_CONSTRAINT: f64 = 0.1;
 
-        let starting_rating_deviation: f32 = params.starting_rd.unwrap_or(DEFAULT_STARTING_RD);
-        let starting_volatility: f32 = params
+        let starting_rating_deviation: f64 = params.starting_rd.unwrap_or(DEFAULT_STARTING_RD);
+        let starting_volatility: f64 = params
             .starting_volatility
             .unwrap_or(DEFAULT_STARTING_VOLATILITY);
-        let offsets: HashMap<String, f32> = params.offsets.unwrap_or_default();
-        let scale_factor: f32 = params.scale_factor.unwrap_or(DEFAULT_SCALE_FACTOR);
-        let volatility_constraint: f32 = params
+        let offsets: HashMap<String, f64> = params.offsets.unwrap_or_default();
+        let scale_factor: f64 = params.scale_factor.unwrap_or(DEFAULT_SCALE_FACTOR);
+        let volatility_constraint: f64 = params
             .volatility_constraint
             .unwrap_or(VOLATILITY_CONSTRAINT);
-        let starting_elo: f32 = params.starting_elo.unwrap_or(STARTING_ELO);
+        let starting_elo: f64 = params.starting_elo.unwrap_or(STARTING_ELO);
 
         let mut model_stats = HashMap::new();
         for team in params.teams.clone().into_iter() {
@@ -88,7 +88,7 @@ impl GlickoModel {
 
 impl fmt::Display for GlickoModel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut stats: Vec<(&String, &GlickoTeamStats)> = self.model_stats.iter().collect();
+        let mut stats: Vec<_> = self.model_stats.iter().collect();
         stats.sort_by(|(_, a), (_, b)| b.elo.partial_cmp(&a.elo).unwrap());
         let mut output: Vec<String> = vec!["".to_string()];
         for team in &stats {
@@ -98,8 +98,8 @@ impl fmt::Display for GlickoModel {
     }
 }
 
-pub fn predict(model: &GlickoModel, match_: &Match, scale: Option<f32>) -> MatchPrediction {
-    let scale: f32 = scale.unwrap_or(2.0f32.sqrt());
+pub fn predict(model: &GlickoModel, match_: &Match, scale: Option<f64>) -> MatchPrediction {
+    let scale: f64 = scale.unwrap_or(2.0f64.sqrt());
     let h_team = &match_.home_team;
     let a_team = &match_.away_team;
 
@@ -120,17 +120,17 @@ pub fn predict(model: &GlickoModel, match_: &Match, scale: Option<f32>) -> Match
 }
 
 pub fn update(
-    model: &mut GlickoModel,
-    match_: Match,
-    match_result: MatchResult,
-) -> &mut GlickoModel {
-    let h_team = match_.home_team;
-    let a_team = match_.away_team;
-    let mut h_team_stats = model.model_stats.clone().get(&h_team).unwrap().clone();
-    let mut a_team_stats = model.model_stats.clone().get(&a_team).unwrap().clone();
+    mut model: GlickoModel,
+    match_: &Match,
+    match_result: &MatchResult,
+) -> GlickoModel {
+    let h_team = &match_.home_team;
+    let a_team = &match_.away_team;
+    let mut h_team_stats = model.model_stats.clone().get(h_team).unwrap().clone();
+    let mut a_team_stats = model.model_stats.clone().get(a_team).unwrap().clone();
 
     let mut h_team_rating = (h_team_stats.elo
-        + model.model_params.offsets.get(&h_team).unwrap_or(&0.0)
+        + model.model_params.offsets.get(h_team).unwrap_or(&0.0)
         - model.model_params.starting_elo)
         / model.model_params.scale_factor;
     let mut a_team_rating =
@@ -195,34 +195,33 @@ pub fn update(
     h_team_stats.rd = h_team_rd_scaled * model.model_params.scale_factor;
     a_team_stats.rd = a_team_rd_scaled * model.model_params.scale_factor;
 
-    model.model_stats.get_mut(&h_team).unwrap().volatility = h_team_stats.volatility;
-    model.model_stats.get_mut(&h_team).unwrap().rd = h_team_stats.rd;
-    model.model_stats.get_mut(&h_team).unwrap().elo = h_team_stats.elo;
+    model.model_stats.get_mut(h_team).unwrap().volatility = h_team_stats.volatility;
+    model.model_stats.get_mut(h_team).unwrap().rd = h_team_stats.rd;
+    model.model_stats.get_mut(h_team).unwrap().elo = h_team_stats.elo;
 
-    model.model_stats.get_mut(&a_team).unwrap().volatility = a_team_stats.volatility;
-    model.model_stats.get_mut(&a_team).unwrap().rd = a_team_stats.rd;
-    model.model_stats.get_mut(&a_team).unwrap().elo = a_team_stats.elo;
-
+    model.model_stats.get_mut(a_team).unwrap().volatility = a_team_stats.volatility;
+    model.model_stats.get_mut(a_team).unwrap().rd = a_team_stats.rd;
+    model.model_stats.get_mut(a_team).unwrap().elo = a_team_stats.elo;
     model
 }
 
 #[allow(clippy::too_many_arguments)]
 fn new_volatility(
     model_params: &GlickoModelParams,
-    vol: f32,
-    rd: f32,
-    mu: f32,
-    mu_j: f32,
-    phi_j: f32,
-    score: f32,
-    v: f32,
-) -> f32 {
+    vol: f64,
+    rd: f64,
+    mu: f64,
+    mu_j: f64,
+    phi_j: f64,
+    score: f64,
+    v: f64,
+) -> f64 {
     let a = vol.powi(2).ln();
     let eps = 0.000001;
     let mut var_a = a;
 
-    let mut var_b: f32;
-    let delta: f32 = delta_(score, mu, mu_j, phi_j);
+    let mut var_b: f64;
+    let delta: f64 = delta_(score, mu, mu_j, phi_j);
     let tau = model_params.volatility_constraint;
     if delta.powi(2) > rd.powi(2) + v {
         var_b = (delta.powi(2) - rd.powi(2) - v).ln();
@@ -230,7 +229,7 @@ fn new_volatility(
         let mut k = 1;
         while f_(
             rd,
-            a - k as f32 * tau.abs(),
+            a - k as f64 * tau.powi(2).sqrt(),
             delta,
             v,
             a,
@@ -239,7 +238,7 @@ fn new_volatility(
         {
             k += 1;
         }
-        var_b = a - k as f32 * tau.abs();
+        var_b = a - k as f64 * tau.powi(2).sqrt();
     }
 
     let mut f_a = f_(rd, var_a, delta, v, a, model_params.volatility_constraint);
@@ -261,25 +260,69 @@ fn new_volatility(
     (var_a / 2.0).exp()
 }
 
-fn f_(rd: f32, x: f32, delta: f32, v: f32, a: f32, vol_constraint: f32) -> f32 {
+fn f_(rd: f64, x: f64, delta: f64, v: f64, a: f64, vol_constraint: f64) -> f64 {
     let ex = x.exp();
     let num = ex * (delta.powi(2) - rd.powi(2) - v - ex);
     let den = 2.0 * ((rd.powi(2) + v + ex).powi(2));
-    (num / den) - (x - a) / vol_constraint
+    (num / den) - (x - a) / vol_constraint.powi(2)
 }
 
-fn g_(phi: f32) -> f32 {
-    1.0 / (1.0 + 3.0 * phi.powi(2) / PI.powi(2))
+fn g_(phi: f64) -> f64 {
+    1.0 / (1.0 + 3.0 * phi.powi(2) / PI.powi(2)).sqrt()
 }
 
-fn e_(mu: f32, mu_j: f32, phi_j: f32) -> f32 {
+fn e_(mu: f64, mu_j: f64, phi_j: f64) -> f64 {
     1.0 / (1.0 + (-g_(phi_j) * (mu - mu_j)).exp())
 }
 
-fn v_(mu: f32, mu_j: f32, phi_j: f32) -> f32 {
+fn v_(mu: f64, mu_j: f64, phi_j: f64) -> f64 {
     1.0 / (g_(phi_j).powi(2) * e_(mu, mu_j, phi_j) * (1.0 - e_(mu, mu_j, phi_j)))
 }
 
-fn delta_(score: f32, mu: f32, mu_j: f32, phi_j: f32) -> f32 {
+fn delta_(score: f64, mu: f64, mu_j: f64, phi_j: f64) -> f64 {
     v_(mu, mu_j, phi_j) * g_(phi_j) * (score - e_(mu, mu_j, phi_j))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::tipping::Team;
+
+    use super::*;
+
+    #[test]
+    fn test_model() {
+        let model_params = GlickoModelInitParams{
+            teams: HashSet::from(["A".to_string(), "B".to_string()]),
+            starting_rd: None,
+            starting_volatility: None,
+            starting_elo: None,
+            offsets: None,
+            scale_factor: None,
+            volatility_constraint: None,
+        };
+        
+        let mut model = GlickoModel::new(model_params);
+        println!("{}", model);
+        let match_= Match{home_team: "A".to_string(), away_team: "B".to_string(), venue: None, date: chrono::NaiveDateTime::parse_from_str("2024-04-01 10:10:10", "%Y-%m-%d %H:%M:%S").unwrap()};
+        let h_team = Team{name: "A".to_string()};
+        let a_team = Team{name: "B".to_string()};
+        let match_result = MatchResult{winning_team: Some(h_team.clone()), winning_margin: Some(0), draw: false, home_team_won: true, away_team_won: false};
+        model = update(model.clone(), &match_, &match_result);
+        println!("{}", model);
+        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1500.8613081137828).abs() < 0.000_001);
+        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1499.1386918862172).abs() < 0.000_001);
+        model = update(model.clone(), &match_, &match_result);
+        println!("{}", model);
+        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1501.9303887754816).abs() < 0.000_001);
+        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1498.0696112245184).abs() < 0.000_001);
+        model = update(model.clone(), &match_, &match_result);
+        println!("{}", model);
+        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1503.2020226041004).abs() < 0.000_001);
+        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1496.7979772958996).abs() < 0.000_001);
+        model = update(model.clone(), &match_, &match_result);
+        println!("{}", model);
+        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1504.6700786004337).abs() < 0.000_001);
+        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1495.3299213995663).abs() < 0.000_001);
+        
+    }
 }

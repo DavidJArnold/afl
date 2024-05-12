@@ -14,7 +14,7 @@ pub fn run_model() {
     let tipping_matches = get_squiggle_season(year, user_agent, cache);
     let teams = get_squiggle_teams(&warmup_matches);
 
-    let mut offsets: HashMap<String, f32> = HashMap::new();
+    let mut offsets: HashMap<String, f64> = HashMap::new();
     offsets.insert("Richmond".to_string(), 0.001_694);
     offsets.insert("Brisbane Lions".to_string(), 10.483_391);
     offsets.insert("Collingwood".to_string(), 0.000_452);
@@ -49,10 +49,12 @@ pub fn run_model() {
     for game in warmup_matches {
         let match_obj = game.get_match();
         let match_result = game.get_match_result();
-        update(&mut model, match_obj, match_result);
+        {
+            model = update(model, &match_obj, &match_result);
+        }
     }
 
-    println!("{model}");
+    // println!("{model}");
     let mut total = 0;
     let mut num_games = 0;
     for round in 0..tipping_matches.iter().map(|x| x.round).max().unwrap() + 1 {
@@ -61,6 +63,9 @@ pub fn run_model() {
             .clone()
             .all(|x| x.timestr == Some("Full Time".to_string()));
         let round_started = round_matches.clone().any(|x| x.timestr.is_some());
+        if round_started && !round_over {
+            println!("{}", model);
+        }
         if !round_started {
             break;
         }
@@ -90,7 +95,9 @@ pub fn run_model() {
                 );
             }
             if game.timestr == Some("Full Time".to_string()) {
-                update(&mut model, game.get_match(), game.get_match_result());
+                {
+                    model = update(model, &game.get_match(), &game.get_match_result());
+                }
             }
         }
     }
