@@ -15,7 +15,7 @@ pub struct Match {
 #[derive(Debug)]
 pub struct MatchResult {
     winning_team: Option<Team>,
-    winning_margin: Option<i32>,
+    winning_margin: Option<u32>,
     draw: bool,
     home_team_won: bool,
     away_team_won: bool,
@@ -23,7 +23,7 @@ pub struct MatchResult {
 
 pub struct MatchPrediction {
     prediction: f64,
-    pred_margin: i32,
+    pred_margin: u32,
     home_team_win: bool,
 }
 
@@ -89,7 +89,7 @@ impl SquiggleMatch {
         let margin = if self.hscore == self.ascore {
             None
         } else {
-            Some((self.hscore.unwrap() - self.ascore.unwrap()).abs())
+            Some((self.hscore.unwrap() - self.ascore.unwrap()).unsigned_abs())
         };
         let winning_team = if self.ascore.unwrap() == self.hscore.unwrap() {
             None
