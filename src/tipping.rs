@@ -28,7 +28,7 @@ pub struct MatchPrediction {
 }
 
 #[derive(Debug, Clone)]
-struct Team{
+struct Team {
     name: String,
 }
 

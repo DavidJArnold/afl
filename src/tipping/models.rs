@@ -69,13 +69,10 @@ pub fn run_model(year: i32) {
         let round_over = round_matches
             .clone()
             .all(|x| x.timestr == Some("Full Time".to_string()));
+        if !round_over {
+            println!("{model}")
+        };
         let round_started = round_matches.clone().any(|x| x.timestr.is_some());
-        if round_started && !round_over {
-            println!("{}", model);
-        }
-        if !round_started {
-            break;
-        }
         let mut first_game = true;
         for game in round_matches {
             let mut p = predict(&model, &game.get_match(), None);
@@ -101,16 +98,20 @@ pub fn run_model(year: i32) {
                     num_games += 1;
                     if correct {
                         total += 1;
-                        let pred_error = (p.pred_margin as i64 - game_result.winning_margin.unwrap_or(0) as i64).abs();
+                        let pred_error = (p.pred_margin as i64
+                            - game_result.winning_margin.unwrap_or(0) as i64)
+                            .abs();
                         mae += pred_error;
                         bits += 1.0 + p.prediction.log(2f64);
                         if first_game {
                             error_margin += pred_error;
                         }
                     } else {
-                        let pred_error = (p.pred_margin as i64 + game_result.winning_margin.unwrap_or(0) as i64).abs();
+                        let pred_error = (p.pred_margin as i64
+                            + game_result.winning_margin.unwrap_or(0) as i64)
+                            .abs();
                         mae += pred_error;
-                        bits += 1.0 + (1.0-p.prediction).log(2f64);
+                        bits += 1.0 + (1.0 - p.prediction).log(2f64);
                         if first_game {
                             error_margin += pred_error;
                         }
@@ -120,19 +121,28 @@ pub fn run_model(year: i32) {
                     continue;
                 }
             }
-            if round_started && !round_over {
+            if !round_over || !round_started {
+                let w = if p.prediction >= 0.5 { "H" } else { "A" };
+
                 println!(
-                    "{} by {} pts ({}): {} v {}",
+                    "({}) {} by {} pts ({:.2}%): {} v {}",
+                    w,
                     predicted_winner,
                     p.pred_margin,
-                    p.prediction.max(1.0 - p.prediction),
+                    p.prediction.max(1.0 - p.prediction) * 100.0,
                     &game.hteam.as_ref().unwrap(),
                     &game.ateam.as_ref().unwrap()
                 );
             }
         }
+        if !round_started {
+            break;
+        };
     }
-    println!("{year} score {total} from {num_games} games ({:.2}%), first round margin {error_margin}", total as f32 / num_games as f32 * 100.0);
+    println!(
+        "{year} score {total} from {num_games} games ({:.2}%), first round margin {error_margin}",
+        total as f32 / num_games as f32 * 100.0
+    );
     let mean_mae = mae as f64 / num_games as f64;
     println!("MAE: {mean_mae} BITS: {bits} (final k={})", margin_model.k);
 }

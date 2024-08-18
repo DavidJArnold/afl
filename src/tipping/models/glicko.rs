@@ -119,11 +119,7 @@ pub fn predict(model: &GlickoModel, match_: &Match, scale: Option<f64>) -> Match
     }
 }
 
-pub fn update(
-    mut model: GlickoModel,
-    match_: &Match,
-    match_result: &MatchResult,
-) -> GlickoModel {
+pub fn update(mut model: GlickoModel, match_: &Match, match_result: &MatchResult) -> GlickoModel {
     let h_team = &match_.home_team;
     let a_team = &match_.away_team;
     let mut h_team_stats = model.model_stats.clone().get(h_team).unwrap().clone();
@@ -289,11 +285,11 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: f64 = 0.001;
+    const TOLERANCE: f64 = 0.0001;
 
     #[test]
     fn test_model() {
-        let model_params = GlickoModelInitParams{
+        let model_params = GlickoModelInitParams {
             teams: HashSet::from(["A".to_string(), "B".to_string()]),
             starting_rd: None,
             starting_volatility: None,
@@ -302,34 +298,74 @@ mod tests {
             scale_factor: None,
             volatility_constraint: None,
         };
-        
+
         let mut model = GlickoModel::new(model_params);
         println!("{}", model);
-        let match_= Match{home_team: "A".to_string(), away_team: "B".to_string(), venue: None, date: chrono::NaiveDateTime::parse_from_str("2024-04-01 10:10:10", "%Y-%m-%d %H:%M:%S").unwrap()};
-        let h_team = Team{name: "A".to_string()};
-        let a_team = Team{name: "B".to_string()};
-        let match_result = MatchResult{winning_team: Some(h_team.clone()), winning_margin: Some(0), draw: false, home_team_won: true, away_team_won: false};
+        let match_ = Match {
+            home_team: "A".to_string(),
+            away_team: "B".to_string(),
+            venue: None,
+            date: chrono::NaiveDateTime::parse_from_str("2024-04-01 10:10:10", "%Y-%m-%d %H:%M:%S")
+                .unwrap(),
+        };
+        let h_team = Team {
+            name: "A".to_string(),
+        };
+        let a_team = Team {
+            name: "B".to_string(),
+        };
+        let match_result = MatchResult {
+            winning_team: Some(h_team.clone()),
+            winning_margin: Some(0),
+            draw: false,
+            home_team_won: true,
+            away_team_won: false,
+        };
         model = update(model.clone(), &match_, &match_result);
         println!("{}", model);
-        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1500.8613081137828).abs() < TOLERANCE);
-        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1499.1386918862172).abs() < TOLERANCE);
+        assert!(
+            (model.model_stats.get(&h_team.name).unwrap().elo - 1500.8613081137828).abs()
+                < TOLERANCE
+        );
+        assert!(
+            (model.model_stats.get(&a_team.name).unwrap().elo - 1499.1386918862172).abs()
+                < TOLERANCE
+        );
         model = update(model.clone(), &match_, &match_result);
         println!("{}", model);
-        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1501.9303887754816).abs() < TOLERANCE);
-        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1498.0696112245184).abs() < TOLERANCE);
+        assert!(
+            (model.model_stats.get(&h_team.name).unwrap().elo - 1501.9303887754816).abs()
+                < TOLERANCE
+        );
+        assert!(
+            (model.model_stats.get(&a_team.name).unwrap().elo - 1498.0696112245184).abs()
+                < TOLERANCE
+        );
         model = update(model.clone(), &match_, &match_result);
         println!("{}", model);
-        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1503.2020226041004).abs() < TOLERANCE);
-        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1496.7979772958996).abs() < TOLERANCE);
+        assert!(
+            (model.model_stats.get(&h_team.name).unwrap().elo - 1503.2020226041004).abs()
+                < TOLERANCE
+        );
+        assert!(
+            (model.model_stats.get(&a_team.name).unwrap().elo - 1496.7979772958996).abs()
+                < TOLERANCE
+        );
         model = update(model.clone(), &match_, &match_result);
         println!("{}", model);
-        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1504.6700786004337).abs() < TOLERANCE);
-        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1495.3299213995663).abs() < TOLERANCE);
+        assert!(
+            (model.model_stats.get(&h_team.name).unwrap().elo - 1504.6700786004337).abs()
+                < TOLERANCE
+        );
+        assert!(
+            (model.model_stats.get(&a_team.name).unwrap().elo - 1495.3299213995663).abs()
+                < TOLERANCE
+        );
     }
 
     #[test]
     fn test_model_2() {
-        let model_params = GlickoModelInitParams{
+        let model_params = GlickoModelInitParams {
             teams: HashSet::from(["A".to_string(), "B".to_string()]),
             starting_rd: None,
             starting_volatility: None,
@@ -338,18 +374,40 @@ mod tests {
             scale_factor: None,
             volatility_constraint: None,
         };
-        
+
         let mut model = GlickoModel::new(model_params);
         println!("{}", model);
-        let match_= Match{home_team: "A".to_string(), away_team: "B".to_string(), venue: None, date: chrono::NaiveDateTime::parse_from_str("2024-04-01 10:10:10", "%Y-%m-%d %H:%M:%S").unwrap()};
-        let h_team = Team{name: "A".to_string()};
-        let a_team = Team{name: "B".to_string()};
-        let match_result = MatchResult{winning_team: Some(h_team.clone()), winning_margin: Some(0), draw: false, home_team_won: true, away_team_won: false};
+        let match_ = Match {
+            home_team: "A".to_string(),
+            away_team: "B".to_string(),
+            venue: None,
+            date: chrono::NaiveDateTime::parse_from_str("2024-04-01 10:10:10", "%Y-%m-%d %H:%M:%S")
+                .unwrap(),
+        };
+        let h_team = Team {
+            name: "A".to_string(),
+        };
+        let a_team = Team {
+            name: "B".to_string(),
+        };
+        let match_result = MatchResult {
+            winning_team: Some(h_team.clone()),
+            winning_margin: Some(0),
+            draw: false,
+            home_team_won: true,
+            away_team_won: false,
+        };
         for _ in 0..70 {
             model = update(model.clone(), &match_, &match_result);
         }
         println!("{}", model);
-        assert!((model.model_stats.get(&h_team.name).unwrap().elo - 1691.9490472591813).abs() < TOLERANCE);
-        assert!((model.model_stats.get(&a_team.name).unwrap().elo - 1308.0509527408187).abs() < TOLERANCE);
+        assert!(
+            (model.model_stats.get(&h_team.name).unwrap().elo - 1691.9490472591813).abs()
+                < TOLERANCE
+        );
+        assert!(
+            (model.model_stats.get(&a_team.name).unwrap().elo - 1308.0509527408187).abs()
+                < TOLERANCE
+        );
     }
 }

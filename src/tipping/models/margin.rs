@@ -18,17 +18,13 @@ struct MarginData {
 
 fn calculate_margin_error(k: f64, probs: Vec<f64>, margins: Vec<u32>, correct: Vec<bool>) -> u32 {
     let mut error: i32 = 0;
-    for ((p, m), c) in probs
-        .iter()
-        .zip(margins.iter())
-        .zip(correct.iter())
-    {
+    for ((p, m), c) in probs.iter().zip(margins.iter()).zip(correct.iter()) {
         if *c {
             error += ((k * (*p - 0.5f64)).round() as i32 - (*m as i32)).abs();
         } else {
             error += ((k * (*p - 0.5f64)).round() as i32 + (*m as i32)).abs();
         };
-    };
+    }
     error.try_into().unwrap()
 }
 
@@ -36,9 +32,13 @@ impl CostFunction for MarginData {
     type Param = f64;
     type Output = f64;
 
-
     fn cost(&self, k: &Self::Param) -> Result<Self::Output, Error> {
-        Ok(calculate_margin_error(*k, self.probs.clone(), self.margins.clone(), self.correct.clone()) as f64)
+        Ok(calculate_margin_error(
+            *k,
+            self.probs.clone(),
+            self.margins.clone(),
+            self.correct.clone(),
+        ) as f64)
     }
 }
 
