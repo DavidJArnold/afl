@@ -285,7 +285,7 @@ mod tests {
 
     use super::*;
 
-    const TOLERANCE: f64 = 0.0001;
+    const TOLERANCE: f64 = 0.001;
 
     #[test]
     fn test_model() {

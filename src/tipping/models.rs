@@ -84,6 +84,7 @@ pub fn run_model(year: i32) {
                 game.ateam.as_ref().unwrap()
             };
             let correct = predicted_winner == game.winner.as_ref().unwrap_or(predicted_winner);
+            let scaled_pred = ((p.prediction - 0.5) * 1.2 + 0.5).min(1.0);
 
             if game.timestr == Some("Full Time".to_string()) {
                 let game_result = &game.get_match_result();
@@ -96,13 +97,21 @@ pub fn run_model(year: i32) {
 
                 if round_over {
                     num_games += 1;
-                    if correct {
+                    if game_result.draw {
+                        total += 1;
+                        let pred_error = p.pred_margin as i64;
+                        mae += pred_error;
+                        bits += 1.0 + 0.5 * (scaled_pred*(1.0-scaled_pred)).log(2f64);
+                        if first_game {
+                            error_margin += pred_error;
+                        }
+                    } else if correct {
                         total += 1;
                         let pred_error = (p.pred_margin as i64
                             - game_result.winning_margin.unwrap_or(0) as i64)
                             .abs();
                         mae += pred_error;
-                        bits += 1.0 + p.prediction.log(2f64);
+                        bits += 1.0 + scaled_pred.log(2f64);
                         if first_game {
                             error_margin += pred_error;
                         }
@@ -111,12 +120,14 @@ pub fn run_model(year: i32) {
                             + game_result.winning_margin.unwrap_or(0) as i64)
                             .abs();
                         mae += pred_error;
-                        bits += 1.0 + (1.0 - p.prediction).log(2f64);
+                        bits += 1.0 + (1.0 - scaled_pred).log(2f64);
                         if first_game {
                             error_margin += pred_error;
                         }
                     };
-                    margin_model.update();
+                    if margin_model.data.probs.len() > 25 {
+                        margin_model.update();
+                    }
                     first_game = false;
                     continue;
                 }
@@ -129,13 +140,13 @@ pub fn run_model(year: i32) {
                     w,
                     predicted_winner,
                     p.pred_margin,
-                    p.prediction.max(1.0 - p.prediction) * 100.0,
+                    scaled_pred * 100.0,
                     &game.hteam.as_ref().unwrap(),
                     &game.ateam.as_ref().unwrap()
                 );
             }
         }
-        if !round_started {
+        if !round_started || !round_over {
             break;
         };
     }

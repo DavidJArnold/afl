@@ -5,24 +5,29 @@ use argmin::{
 
 #[derive(Clone)]
 pub struct MarginModel {
-    data: MarginData,
+    pub data: MarginData,
     pub k: f64,
 }
 
 #[derive(Clone)]
-struct MarginData {
-    probs: Vec<f64>,
+pub struct MarginData {
+    pub probs: Vec<f64>,
     margins: Vec<u32>,
     correct: Vec<bool>,
 }
 
+fn margin_formula(k: f64, prob: f64) -> f64 {
+    (k * (prob - 0.5f64)).round()
+}
+
 fn calculate_margin_error(k: f64, probs: Vec<f64>, margins: Vec<u32>, correct: Vec<bool>) -> u32 {
+    // accumulate error over a series of games
     let mut error: i32 = 0;
     for ((p, m), c) in probs.iter().zip(margins.iter()).zip(correct.iter()) {
         if *c {
-            error += ((k * (*p - 0.5f64)).round() as i32 - (*m as i32)).abs();
+            error += (margin_formula(k, *p) as i32 - (*m as i32)).abs();
         } else {
-            error += ((k * (*p - 0.5f64)).round() as i32 + (*m as i32)).abs();
+            error += (margin_formula(k, *p) as i32 + (*m as i32)).abs();
         };
     }
     error.try_into().unwrap()
@@ -70,6 +75,6 @@ impl MarginModel {
     }
 
     pub fn predict(&self, prob: f64) -> u32 {
-        (self.k * (prob - 0.5f64)).round() as u32
+        margin_formula(self.k, prob) as u32
     }
 }
