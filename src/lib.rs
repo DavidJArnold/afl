@@ -4,32 +4,34 @@ use crate::tipping::models::glicko::GlickoModel;
 use tipping::models::margin::MarginModel;
 
 use std::collections::HashMap;
-use tipping::models::glicko::GlickoModelInitParams;
-use tipping::models::glicko::{predict, update};
+use tipping::models::glicko::{predict, update, GlickoModelInitParams};
 
 use tipping::{
     squiggle::{get_squiggle_season, get_squiggle_teams},
-    ModelPerformance, SquiggleMatch,
+    MatchTipping, ModelPerformance, SquiggleMatch,
 };
 
 fn tip_season(
     tipping_matches: Vec<SquiggleMatch>,
     mut model: GlickoModel,
     mut margin_model: MarginModel,
-) -> (MarginModel, ModelPerformance) {
+) -> (
+    GlickoModel,
+    MarginModel,
+    ModelPerformance,
+    Vec<MatchTipping>,
+) {
     let mut total = 0;
     let mut num_games = 0;
     let mut error_margin = 0;
     let mut mae = 0;
     let mut bits = 0.0;
+    let mut tips: Vec<MatchTipping> = vec![];
     for round in 0..tipping_matches.iter().map(|x| x.round).max().unwrap() + 1 {
         let round_matches = tipping_matches.iter().filter(|x| x.round == round);
         let round_over = round_matches
             .clone()
             .all(|x| x.timestr == Some("Full Time".to_string()));
-        if !round_over {
-            println!("{model}")
-        };
         let round_started = round_matches.clone().any(|x| x.timestr.is_some());
         let mut first_game = true;
         for game in round_matches {
@@ -91,17 +93,15 @@ fn tip_season(
                 }
             }
             if !round_over || !round_started {
-                let w = if p.prediction >= 0.5 { "H" } else { "A" };
-
-                println!(
-                    "({}) {} by {} pts ({:.2}%): {} v {}",
-                    w,
-                    predicted_winner,
-                    p.pred_margin,
-                    scaled_pred * 100.0,
-                    &game.hteam.as_ref().unwrap(),
-                    &game.ateam.as_ref().unwrap()
-                );
+                let w = if p.prediction >= 0.5 { 'H' } else { 'A' };
+                tips.push(MatchTipping {
+                    home_or_away_wins: w,
+                    winner: predicted_winner.to_string(),
+                    margin: p.pred_margin,
+                    percent: scaled_pred * 100.0,
+                    home_team_name: game.hteam.as_ref().unwrap().to_string(),
+                    away_team_name: game.ateam.as_ref().unwrap().to_string(),
+                });
             }
         }
         if !round_started || !round_over {
@@ -109,6 +109,7 @@ fn tip_season(
         };
     }
     (
+        model,
         margin_model,
         ModelPerformance {
             total,
@@ -117,10 +118,18 @@ fn tip_season(
             mae,
             bits,
         },
+        tips,
     )
 }
 
-pub fn run_model(year: i32) {
+pub fn run_model(
+    year: i32,
+) -> (
+    GlickoModel,
+    MarginModel,
+    ModelPerformance,
+    Vec<MatchTipping>,
+) {
     let cache = "squiggle_cache";
     let user_agent = "david.14587@gmail.com";
     let warmup_matches = get_squiggle_season(year - 1, user_agent, cache);
@@ -169,18 +178,5 @@ pub fn run_model(year: i32) {
         }
     }
 
-    let (margin_model, perf) = tip_season(tipping_matches, model, margin_model);
-
-    println!(
-        "{year} score {} from {} games ({:.2}%), first round margin {}",
-        perf.total,
-        perf.num_games,
-        perf.total as f32 / perf.num_games as f32 * 100.0,
-        perf.error_margin,
-    );
-    let mean_mae = perf.mae as f64 / perf.num_games as f64;
-    println!(
-        "MAE: {} BITS: {} (final k={})",
-        mean_mae, perf.bits, margin_model.k
-    );
+    tip_season(tipping_matches, model, margin_model)
 }

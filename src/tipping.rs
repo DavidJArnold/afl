@@ -27,6 +27,30 @@ pub struct MatchPrediction {
     pub home_team_win: bool,
 }
 
+pub struct MatchTipping {
+    pub home_or_away_wins: char,
+    pub winner: String,
+    pub margin: u32,
+    pub percent: f64,
+    pub home_team_name: String,
+    pub away_team_name: String,
+}
+
+impl fmt::Display for MatchTipping {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "({}) {} by {} pts ({:.2}%): {} v {}",
+            self.home_or_away_wins,
+            self.winner,
+            self.margin,
+            self.percent,
+            self.home_team_name,
+            self.away_team_name,
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Team {
     pub name: String,
