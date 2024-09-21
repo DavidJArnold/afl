@@ -7,6 +7,10 @@ edition = "2021"
 name = "afl_lib"
 path = "src/lib.rs"
 
+[[bin]]
+name = "afl"
+path = "src/main.rs"
+
 [dependencies]
 argmin = "0.10.0"
 chrono = "0.4.37"
