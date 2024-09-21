@@ -14,22 +14,22 @@ pub struct Match {
 
 #[derive(Debug)]
 pub struct MatchResult {
-    winning_team: Option<Team>,
-    winning_margin: Option<u32>,
-    draw: bool,
-    home_team_won: bool,
-    away_team_won: bool,
+    pub winning_team: Option<Team>,
+    pub winning_margin: Option<u32>,
+    pub draw: bool,
+    pub home_team_won: bool,
+    pub away_team_won: bool,
 }
 
 pub struct MatchPrediction {
-    prediction: f64,
-    pred_margin: u32,
-    home_team_win: bool,
+    pub prediction: f64,
+    pub pred_margin: u32,
+    pub home_team_win: bool,
 }
 
 #[derive(Debug, Clone)]
-struct Team {
-    name: String,
+pub struct Team {
+    pub name: String,
 }
 
 impl PartialEq for Team {
@@ -46,36 +46,36 @@ impl fmt::Display for Team {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SquiggleMatch {
-    abehinds: Option<i32>,
-    agoals: Option<i32>,
-    ascore: Option<i32>,
-    ateam: Option<String>,
-    ateamid: Option<i32>,
-    hbehinds: Option<i32>,
-    hgoals: Option<i32>,
-    hscore: Option<i32>,
-    hteam: Option<String>,
-    hteamid: Option<i32>,
-    complete: Option<i8>,
-    date: String,
-    id: i32,
-    is_final: i32,
-    is_grand_final: i32,
-    localtime: String,
-    round: i32,
-    roundname: Option<String>,
-    timestr: Option<String>,
-    tz: String,
-    unixtime: i64,
-    updated: Option<String>,
-    venue: Option<String>,
-    winner: Option<String>,
-    winnerteamid: Option<i32>,
-    year: Option<i32>,
+    pub abehinds: Option<i32>,
+    pub agoals: Option<i32>,
+    pub ascore: Option<i32>,
+    pub ateam: Option<String>,
+    pub ateamid: Option<i32>,
+    pub hbehinds: Option<i32>,
+    pub hgoals: Option<i32>,
+    pub hscore: Option<i32>,
+    pub hteam: Option<String>,
+    pub hteamid: Option<i32>,
+    pub complete: Option<i8>,
+    pub date: String,
+    pub id: i32,
+    pub is_final: i32,
+    pub is_grand_final: i32,
+    pub localtime: String,
+    pub round: i32,
+    pub roundname: Option<String>,
+    pub timestr: Option<String>,
+    pub tz: String,
+    pub unixtime: i64,
+    pub updated: Option<String>,
+    pub venue: Option<String>,
+    pub winner: Option<String>,
+    pub winnerteamid: Option<i32>,
+    pub year: Option<i32>,
 }
 
 impl SquiggleMatch {
-    fn get_match(&self) -> Match {
+    pub fn get_match(&self) -> Match {
         Match {
             home_team: self.hteam.clone().unwrap(),
             away_team: self.ateam.clone().unwrap(),
@@ -85,7 +85,7 @@ impl SquiggleMatch {
         }
     }
 
-    fn get_match_result(&self) -> MatchResult {
+    pub fn get_match_result(&self) -> MatchResult {
         let margin = if self.hscore == self.ascore {
             None
         } else {
@@ -107,4 +107,12 @@ impl SquiggleMatch {
             draw: self.hscore.unwrap() == self.ascore.unwrap(),
         }
     }
+}
+
+pub struct ModelPerformance {
+    pub total: u32,
+    pub num_games: u32,
+    pub error_margin: i64,
+    pub mae: i64,
+    pub bits: f64,
 }

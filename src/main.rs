@@ -1,5 +1,5 @@
-pub mod tipping;
+use afl::run_model;
 
 fn main() {
-    tipping::models::run_model(2024);
+    run_model(2024);
 }
