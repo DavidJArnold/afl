@@ -5,6 +5,7 @@ edition = "2021"
 
 [lib]
 name = "afl_lib"
+path = "src/lib.rs"
 
 [dependencies]
 argmin = "0.10.0"
