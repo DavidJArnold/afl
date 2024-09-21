@@ -1,13 +1,124 @@
+use glicko::GlickoModel;
 use margin::MarginModel;
 
 use self::glicko::GlickoModelInitParams;
 use crate::tipping::models::glicko::{predict, update};
 use std::collections::HashMap;
 
-use super::squiggle::{get_squiggle_season, get_squiggle_teams};
+use super::{
+    squiggle::{get_squiggle_season, get_squiggle_teams},
+    SquiggleMatch,
+};
 
 pub mod glicko;
 pub mod margin;
+
+fn tip_season(
+    tipping_matches: Vec<SquiggleMatch>,
+    mut model: GlickoModel,
+    mut margin_model: MarginModel,
+) -> (GlickoModel, MarginModel, u32, u32, i64, i64, f64) {
+    let mut total = 0;
+    let mut num_games = 0;
+    let mut error_margin = 0;
+    let mut mae = 0;
+    let mut bits = 0.0;
+    for round in 0..tipping_matches.iter().map(|x| x.round).max().unwrap() + 1 {
+        let round_matches = tipping_matches.iter().filter(|x| x.round == round);
+        let round_over = round_matches
+            .clone()
+            .all(|x| x.timestr == Some("Full Time".to_string()));
+        if !round_over {
+            println!("{model}")
+        };
+        let round_started = round_matches.clone().any(|x| x.timestr.is_some());
+        let mut first_game = true;
+        for game in round_matches {
+            let mut p = predict(&model, &game.get_match(), None);
+            p.pred_margin = margin_model.predict(p.prediction.max(1f64 - p.prediction));
+
+            let predicted_winner = if p.home_team_win {
+                game.hteam.as_ref().unwrap()
+            } else {
+                game.ateam.as_ref().unwrap()
+            };
+            let correct = predicted_winner == game.winner.as_ref().unwrap_or(predicted_winner);
+            let scaled_pred = ((p.prediction - 0.5) * 1.2 + 0.5).min(1.0);
+
+            if game.timestr == Some("Full Time".to_string()) {
+                let game_result = &game.get_match_result();
+                model = update(model, &game.get_match(), game_result);
+                margin_model.add_result(
+                    p.prediction.max(1.0f64 - p.prediction),
+                    game_result.winning_margin.unwrap_or(0),
+                    correct,
+                );
+
+                if round_over {
+                    num_games += 1;
+                    if game_result.draw {
+                        total += 1;
+                        let pred_error = p.pred_margin as i64;
+                        mae += pred_error;
+                        bits += 1.0 + 0.5 * (scaled_pred * (1.0 - scaled_pred)).log(2f64);
+                        if first_game {
+                            error_margin += pred_error;
+                        }
+                    } else if correct {
+                        total += 1;
+                        let pred_error = (p.pred_margin as i64
+                            - game_result.winning_margin.unwrap_or(0) as i64)
+                            .abs();
+                        mae += pred_error;
+                        bits += 1.0 + scaled_pred.log(2f64);
+                        if first_game {
+                            error_margin += pred_error;
+                        }
+                    } else {
+                        let pred_error = (p.pred_margin as i64
+                            + game_result.winning_margin.unwrap_or(0) as i64)
+                            .abs();
+                        mae += pred_error;
+                        bits += 1.0 + (1.0 - scaled_pred).log(2f64);
+                        if first_game {
+                            error_margin += pred_error;
+                        }
+                    };
+                    if margin_model.data.probs.len() > 25 {
+                        margin_model.update();
+                    }
+                    first_game = false;
+                    continue;
+                }
+            }
+            if !round_over || !round_started {
+                let w = if p.prediction >= 0.5 { "H" } else { "A" };
+
+                println!(
+                    "({}) {} by {} pts ({:.2}%): {} v {}",
+                    w,
+                    predicted_winner,
+                    p.pred_margin,
+                    scaled_pred * 100.0,
+                    &game.hteam.as_ref().unwrap(),
+                    &game.ateam.as_ref().unwrap()
+                );
+            }
+        }
+        if !round_started || !round_over {
+            break;
+        };
+    }
+    (
+        model,
+        margin_model,
+        total,
+        num_games,
+        error_margin,
+        mae,
+        bits,
+    )
+}
 
 pub fn run_model(year: i32) {
     let cache = "squiggle_cache";
@@ -58,98 +169,9 @@ pub fn run_model(year: i32) {
         }
     }
 
-    // println!("{model}");
-    let mut total = 0;
-    let mut num_games = 0;
-    let mut error_margin = 0;
-    let mut mae = 0;
-    let mut bits = 0.0;
-    for round in 0..tipping_matches.iter().map(|x| x.round).max().unwrap() + 1 {
-        let round_matches = tipping_matches.iter().filter(|x| x.round == round);
-        let round_over = round_matches
-            .clone()
-            .all(|x| x.timestr == Some("Full Time".to_string()));
-        if !round_over {
-            println!("{model}")
-        };
-        let round_started = round_matches.clone().any(|x| x.timestr.is_some());
-        let mut first_game = true;
-        for game in round_matches {
-            let mut p = predict(&model, &game.get_match(), None);
-            p.pred_margin = margin_model.predict(p.prediction.max(1f64 - p.prediction));
+    let (model, margin_model, total, num_games, error_margin, mae, bits) =
+        tip_season(tipping_matches, model, margin_model);
 
-            let predicted_winner = if p.home_team_win {
-                game.hteam.as_ref().unwrap()
-            } else {
-                game.ateam.as_ref().unwrap()
-            };
-            let correct = predicted_winner == game.winner.as_ref().unwrap_or(predicted_winner);
-            let scaled_pred = ((p.prediction - 0.5) * 1.2 + 0.5).min(1.0);
-
-            if game.timestr == Some("Full Time".to_string()) {
-                let game_result = &game.get_match_result();
-                model = update(model, &game.get_match(), game_result);
-                margin_model.add_result(
-                    p.prediction.max(1.0f64 - p.prediction),
-                    game_result.winning_margin.unwrap_or(0),
-                    correct,
-                );
-
-                if round_over {
-                    num_games += 1;
-                    if game_result.draw {
-                        total += 1;
-                        let pred_error = p.pred_margin as i64;
-                        mae += pred_error;
-                        bits += 1.0 + 0.5 * (scaled_pred*(1.0-scaled_pred)).log(2f64);
-                        if first_game {
-                            error_margin += pred_error;
-                        }
-                    } else if correct {
-                        total += 1;
-                        let pred_error = (p.pred_margin as i64
-                            - game_result.winning_margin.unwrap_or(0) as i64)
-                            .abs();
-                        mae += pred_error;
-                        bits += 1.0 + scaled_pred.log(2f64);
-                        if first_game {
-                            error_margin += pred_error;
-                        }
-                    } else {
-                        let pred_error = (p.pred_margin as i64
-                            + game_result.winning_margin.unwrap_or(0) as i64)
-                            .abs();
-                        mae += pred_error;
-                        bits += 1.0 + (1.0 - scaled_pred).log(2f64);
-                        if first_game {
-                            error_margin += pred_error;
-                        }
-                    };
-                    if margin_model.data.probs.len() > 25 {
-                        margin_model.update();
-                    }
-                    first_game = false;
-                    continue;
-                }
-            }
-            if !round_over || !round_started {
-                let w = if p.prediction >= 0.5 { "H" } else { "A" };
-
-                println!(
-                    "({}) {} by {} pts ({:.2}%): {} v {}",
-                    w,
-                    predicted_winner,
-                    p.pred_margin,
-                    scaled_pred * 100.0,
-                    &game.hteam.as_ref().unwrap(),
-                    &game.ateam.as_ref().unwrap()
-                );
-            }
-        }
-        if !round_started || !round_over {
-            break;
-        };
-    }
     println!(
         "{year} score {total} from {num_games} games ({:.2}%), first round margin {error_margin}",
         total as f32 / num_games as f32 * 100.0
