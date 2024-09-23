@@ -44,13 +44,13 @@ fn tip_season(
                 game.ateam.as_ref().unwrap()
             };
             let correct = predicted_winner == game.winner.as_ref().unwrap_or(predicted_winner);
-            let scaled_pred = ((p.prediction - 0.5) * 1.2 + 0.5).min(1.0);
+            let scaled_pred = ((p.prediction.max(1.0f64 - p.prediction)- 0.5) * 1.2 + 0.5).min(1.0);
 
             if game.timestr == Some("Full Time".to_string()) {
                 let game_result = &game.get_match_result();
                 model = update(model, &game.get_match(), game_result);
                 margin_model.add_result(
-                    p.prediction.max(1.0f64 - p.prediction),
+                    scaled_pred,
                     game_result.winning_margin.unwrap_or(0),
                     correct,
                 );
