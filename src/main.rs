@@ -1,9 +1,12 @@
+use std::env;
+
 use afl::run_model;
 
 fn main() {
     let year = 2024;
 
-    let (model, margin_model, perf, tips) = run_model(year);
+    let email = env::var("AFL_USER_EMAIL").expect("AFL_USER_EMAIL environment variable not set.");
+    let (model, margin_model, perf, tips) = run_model(year, None, &email);
 
     println!("{model}");
 

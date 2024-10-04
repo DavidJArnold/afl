@@ -44,7 +44,8 @@ fn tip_season(
                 game.ateam.as_ref().unwrap()
             };
             let correct = predicted_winner == game.winner.as_ref().unwrap_or(predicted_winner);
-            let scaled_pred = ((p.prediction.max(1.0f64 - p.prediction)- 0.5) * 1.2 + 0.5).min(1.0);
+            let scaled_pred =
+                ((p.prediction.max(1.0f64 - p.prediction) - 0.5) * 1.2 + 0.5).min(1.0);
 
             if game.timestr == Some("Full Time".to_string()) {
                 let game_result = &game.get_match_result();
@@ -124,14 +125,15 @@ fn tip_season(
 
 pub fn run_model(
     year: i32,
+    cache_name: Option<&str>,
+    user_agent: &str,
 ) -> (
     GlickoModel,
     MarginModel,
     ModelPerformance,
     Vec<MatchTipping>,
 ) {
-    let cache = "squiggle_cache";
-    let user_agent = "david.14587@gmail.com";
+    let cache = cache_name.unwrap_or("squiggle_cache");
     let warmup_matches = get_squiggle_season(year - 1, user_agent, cache);
     let tipping_matches = get_squiggle_season(year, user_agent, cache);
     let teams = get_squiggle_teams(&warmup_matches);
