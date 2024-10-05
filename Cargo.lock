@@ -788,7 +788,7 @@ dependencies = [
 [[package]]
 name = "request_cache"
 version = "0.1.0"
-source = "git+https://github.com/DavidJArnold/request_cache/#3fbb4b22177bbf5a498ae9f9526884e0f1506d47"
+source = "git+https://github.com/DavidJArnold/request_cache/#413d3d40ad5093bbbe4500ce9cc91159175c4dd5"
 dependencies = [
  "reqwest",
  "sqlite",
