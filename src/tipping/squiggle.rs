@@ -6,7 +6,7 @@ use serde_json::Value;
 use crate::tipping::SquiggleMatch;
 
 async fn call_squiggle_season(year: i32, user_agent: &str, cache_session: &str) -> String {
-    let conn = create_connection(cache_session);
+    let conn = create_connection(cache_session).await;
     let url = format!("https://api.squiggle.com.au/?q=games;year={}", year);
     let resp = request(
         &conn,
