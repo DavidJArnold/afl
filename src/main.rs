@@ -1,10 +1,12 @@
 use std::env;
 
 use afl::run_model;
+use chrono::Datelike;
 
 #[tokio::main]
 async fn main() {
-    let year = 2024;
+    let current_date = chrono::Utc::now();
+    let year = current_date.year();
 
     let email = env::var("AFL_USER_EMAIL").expect("AFL_USER_EMAIL environment variable not set.");
     let (model, margin_model, perf, tips) = run_model(year, None, &email).await;
