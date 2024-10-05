@@ -123,7 +123,7 @@ fn tip_season(
     )
 }
 
-pub fn run_model(
+pub async fn run_model(
     year: i32,
     cache_name: Option<&str>,
     user_agent: &str,
@@ -134,8 +134,8 @@ pub fn run_model(
     Vec<MatchTipping>,
 ) {
     let cache = cache_name.unwrap_or("squiggle_cache");
-    let warmup_matches = get_squiggle_season(year - 1, user_agent, cache);
-    let tipping_matches = get_squiggle_season(year, user_agent, cache);
+    let warmup_matches = get_squiggle_season(year - 1, user_agent, cache).await;
+    let tipping_matches = get_squiggle_season(year, user_agent, cache).await;
     let teams = get_squiggle_teams(&warmup_matches);
 
     let mut offsets: HashMap<String, f64> = HashMap::new();

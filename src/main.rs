@@ -2,11 +2,12 @@ use std::env;
 
 use afl::run_model;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let year = 2024;
 
     let email = env::var("AFL_USER_EMAIL").expect("AFL_USER_EMAIL environment variable not set.");
-    let (model, margin_model, perf, tips) = run_model(year, None, &email);
+    let (model, margin_model, perf, tips) = run_model(year, None, &email).await;
 
     println!("{model}");
 
