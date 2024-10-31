@@ -9,7 +9,7 @@ async fn main() {
     let year = current_date.year();
 
     let email = env::var("AFL_USER_EMAIL").expect("AFL_USER_EMAIL environment variable not set.");
-    let (model, margin_model, perf, tips) = run_model(year, None, &email).await;
+    let (model, margin_model, perf, tips) = run_model(year, None, email).await;
 
     println!("{model}");
 

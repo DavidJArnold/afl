@@ -125,16 +125,16 @@ fn tip_season(
 
 pub async fn run_model(
     year: i32,
-    cache_name: Option<&str>,
-    user_agent: &str,
+    cache_name: Option<String>,
+    user_agent: String,
 ) -> (
     GlickoModel,
     MarginModel,
     ModelPerformance,
     Vec<MatchTipping>,
 ) {
-    let cache = cache_name.unwrap_or("squiggle_cache");
-    let warmup_matches = get_squiggle_season(year - 1, user_agent, cache).await;
+    let cache = cache_name.unwrap_or("squiggle_cache".to_string());
+    let warmup_matches = get_squiggle_season(year - 1, user_agent.clone(), cache.clone()).await;
     let tipping_matches = get_squiggle_season(year, user_agent, cache).await;
     let teams = get_squiggle_teams(&warmup_matches);
 
