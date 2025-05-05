@@ -1,20 +1,19 @@
 use std::collections::HashSet;
 
-use request_cache::{create_connection, request};
+use request_cache::cached_request;
 use serde_json::Value;
 
 use crate::tipping::SquiggleMatch;
 
 async fn call_squiggle_season(year: i32, user_agent: String, cache_session: String) -> String {
-    let conn = create_connection(cache_session).await;
     let url = format!("https://api.squiggle.com.au/?q=games;year={}", year);
-    let resp = request(
-        &conn,
+    let resp = cached_request(
         url,
         "GET".to_string(),
-        86_400,
+        21_600, // 8 hours
         Some(false),
         Some(user_agent),
+        Some(cache_session),
     ).await;
     resp.response
 }
