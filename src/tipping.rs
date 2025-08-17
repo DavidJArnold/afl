@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 pub mod models;
 pub mod squiggle;
@@ -36,20 +35,7 @@ pub struct MatchTipping {
     pub away_team_name: String,
 }
 
-impl fmt::Display for MatchTipping {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "({}) {} by {} pts ({:.2}%): {} v {}",
-            self.home_or_away_wins,
-            self.winner,
-            self.margin,
-            self.percent,
-            self.home_team_name,
-            self.away_team_name,
-        )
-    }
-}
+// Display logic moved to presentation module
 
 #[derive(Debug, Clone)]
 pub struct Team {
@@ -62,11 +48,7 @@ impl PartialEq for Team {
     }
 }
 
-impl fmt::Display for Team {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<{}>", self.name)
-    }
-}
+// Display logic moved to presentation module
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SquiggleMatch {
