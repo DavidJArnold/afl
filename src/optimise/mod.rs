@@ -7,11 +7,24 @@ use futures::executor::block_on;
 
 use crate::run_model;
 
-#[derive(Clone)]
+/// Optimization cost function that evaluates team offset parameters
+/// by running predictions across multiple seasons
 struct TotalScore {
     year: i32,
     user_agent: String,
     team_list: Vec<String>,
+    show_progress: bool,
+}
+
+impl Clone for TotalScore {
+    fn clone(&self) -> Self {
+        Self {
+            year: self.year,
+            user_agent: self.user_agent.clone(),
+            team_list: self.team_list.clone(),
+            show_progress: self.show_progress,
+        }
+    }
 }
 
 impl TotalScore {
@@ -33,13 +46,32 @@ impl CostFunction for TotalScore {
         let (_, _, perf1, _) = block_on(run_model(self.year-1, None, Some(offsets.clone()), self.user_agent.clone()));
         let (_, _, perf2, _) = block_on(run_model(self.year-2, None, Some(offsets.clone()), self.user_agent.clone()));
         let (_, _, perf3, _) = block_on(run_model(self.year-3, None, Some(offsets.clone()), self.user_agent.clone()));
-        println!(".");
+        if self.show_progress {
+            print!(".");
+            use std::io::{self, Write};
+            io::stdout().flush().unwrap();
+        }
         Ok(-(perf1.bits + perf2.bits + perf3.bits) as f64)
     }
 }
 
+/// Optimize team offsets using particle swarm optimization with progress indicators
 pub fn optimise(year: i32, team_list: Vec<String>, user_agent: String) -> HashMap<String, f64> {
-    let cost_function = TotalScore { year, user_agent, team_list };
+    optimise_with_progress(year, team_list, user_agent, true)
+}
+
+/// Optimize team offsets silently (no progress output)
+pub fn optimise_silent(year: i32, team_list: Vec<String>, user_agent: String) -> HashMap<String, f64> {
+    optimise_with_progress(year, team_list, user_agent, false)
+}
+
+fn optimise_with_progress(
+    year: i32, 
+    team_list: Vec<String>, 
+    user_agent: String,
+    show_progress: bool
+) -> HashMap<String, f64> {
+    let cost_function = TotalScore { year, user_agent, team_list, show_progress };
 
     let lb: Vec<f64> = [0.0_f64; 18].to_vec();
     let ub: Vec<f64> = [30.0_f64; 18].to_vec();
