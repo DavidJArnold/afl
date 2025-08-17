@@ -1,5 +1,6 @@
 pub mod tipping;
 mod optimise;
+pub mod presentation;
 
 use crate::tipping::models::glicko::GlickoModel;
 pub use optimise::optimise;
