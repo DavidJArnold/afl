@@ -2,15 +2,14 @@ use crate::tipping::{Match, MatchPrediction, MatchResult};
 use std::{
     collections::{HashMap, HashSet},
     f64::consts::PI,
-    fmt,
 };
 
 #[derive(Debug, Clone)]
 pub struct GlickoTeamStats {
-    elo: f64,
-    rd: f64,
-    volatility: f64,
-    offset: f64,
+    pub elo: f64,
+    pub rd: f64,
+    pub volatility: f64,
+    pub offset: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -86,17 +85,7 @@ impl GlickoModel {
     }
 }
 
-impl fmt::Display for GlickoModel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut stats: Vec<_> = self.model_stats.iter().collect();
-        stats.sort_by(|(_, a), (_, b)| b.elo.partial_cmp(&a.elo).unwrap());
-        let mut output: Vec<String> = vec!["".to_string()];
-        for team in &stats {
-            output.push(format!("{}: {}", team.0, team.1.elo));
-        }
-        write!(f, "{}", output.join("\n"))
-    }
-}
+// Display logic moved to presentation module
 
 pub fn predict(model: &GlickoModel, match_: &Match, scale: Option<f64>) -> MatchPrediction {
     let scale: f64 = scale.unwrap_or(2.0f64.sqrt());
@@ -300,7 +289,7 @@ mod tests {
         };
 
         let mut model = GlickoModel::new(model_params);
-        println!("{}", model);
+        // Model display removed - use presentation module
         let match_ = Match {
             home_team: "A".to_string(),
             away_team: "B".to_string(),
@@ -322,7 +311,7 @@ mod tests {
             away_team_won: false,
         };
         model = update(model.clone(), &match_, &match_result);
-        println!("{}", model);
+        // Model display removed - use presentation module
         assert!(
             (model.model_stats.get(&h_team.name).unwrap().elo - 1500.8613081137828).abs()
                 < TOLERANCE
@@ -332,7 +321,7 @@ mod tests {
                 < TOLERANCE
         );
         model = update(model.clone(), &match_, &match_result);
-        println!("{}", model);
+        // Model display removed - use presentation module
         assert!(
             (model.model_stats.get(&h_team.name).unwrap().elo - 1501.9303887754816).abs()
                 < TOLERANCE
@@ -342,7 +331,7 @@ mod tests {
                 < TOLERANCE
         );
         model = update(model.clone(), &match_, &match_result);
-        println!("{}", model);
+        // Model display removed - use presentation module
         assert!(
             (model.model_stats.get(&h_team.name).unwrap().elo - 1503.2020226041004).abs()
                 < TOLERANCE
@@ -352,7 +341,7 @@ mod tests {
                 < TOLERANCE
         );
         model = update(model.clone(), &match_, &match_result);
-        println!("{}", model);
+        // Model display removed - use presentation module
         assert!(
             (model.model_stats.get(&h_team.name).unwrap().elo - 1504.6700786004337).abs()
                 < TOLERANCE
@@ -376,7 +365,7 @@ mod tests {
         };
 
         let mut model = GlickoModel::new(model_params);
-        println!("{}", model);
+        // Model display removed - use presentation module
         let match_ = Match {
             home_team: "A".to_string(),
             away_team: "B".to_string(),
@@ -400,7 +389,7 @@ mod tests {
         for _ in 0..70 {
             model = update(model.clone(), &match_, &match_result);
         }
-        println!("{}", model);
+        // Model display removed - use presentation module
         assert!(
             (model.model_stats.get(&h_team.name).unwrap().elo - 1691.9490472591813).abs()
                 < TOLERANCE
